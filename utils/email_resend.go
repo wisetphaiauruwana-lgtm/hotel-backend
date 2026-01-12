@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/smtp"
 	"os"
 	"strings"
 	"time"
@@ -80,8 +81,7 @@ func resolveFromEmail(requested string) (string, error) {
 func sendResendEmail(to []string, subject, htmlBody, textBody, fromEmail, fromName string) error {
 	apiKey := strings.TrimSpace(os.Getenv("RESEND_API_KEY"))
 	if apiKey == "" {
-		log.Printf("[MOCK EMAIL] to:%v subject:%s", to, subject)
-		return nil
+		return sendSMTPEmail(to, subject, htmlBody, textBody, fromEmail, fromName)
 	}
 	if len(to) == 0 {
 		return errors.New("recipient list is empty")
@@ -132,6 +132,69 @@ func sendResendEmail(to []string, subject, htmlBody, textBody, fromEmail, fromNa
 	if resp.StatusCode >= 300 {
 		respBody, _ := io.ReadAll(resp.Body)
 		return fmt.Errorf("resend error: status=%d body=%s", resp.StatusCode, strings.TrimSpace(string(respBody)))
+	}
+
+	return nil
+}
+
+func sendSMTPEmail(to []string, subject, htmlBody, textBody, fromEmail, fromName string) error {
+	smtpHost := strings.TrimSpace(os.Getenv("SMTP_HOST"))
+	smtpPort := strings.TrimSpace(os.Getenv("SMTP_PORT"))
+	smtpUser := strings.TrimSpace(os.Getenv("SMTP_USERNAME"))
+	smtpPass := strings.TrimSpace(os.Getenv("SMTP_PASSWORD"))
+
+	if smtpHost == "" || smtpPort == "" || smtpUser == "" || smtpPass == "" {
+		log.Printf("[MOCK EMAIL] to:%v subject:%s", to, subject)
+		return nil
+	}
+	if len(to) == 0 {
+		return errors.New("recipient list is empty")
+	}
+
+	fromEmail = strings.TrimSpace(fromEmail)
+	if fromEmail == "" {
+		fromEmail = smtpUser
+	}
+	if strings.ToLower(fromEmail) != strings.ToLower(smtpUser) {
+		return fmt.Errorf("sender email %q does not match SMTP_USERNAME", fromEmail)
+	}
+
+	fromName = strings.TrimSpace(fromName)
+	if fromName == "" {
+		fromName = resendFromName()
+	}
+
+	fromHeader := fromEmail
+	if fromName != "" {
+		fromHeader = fmt.Sprintf("%s <%s>", fromName, fromEmail)
+	}
+
+	boundary := "----=_EMAIL_BOUNDARY"
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("From: %s\r\n", fromHeader))
+	sb.WriteString(fmt.Sprintf("To: %s\r\n", strings.Join(to, ",")))
+	sb.WriteString(fmt.Sprintf("Subject: %s\r\n", subject))
+	sb.WriteString("MIME-Version: 1.0\r\n")
+	sb.WriteString(fmt.Sprintf("Content-Type: multipart/alternative; boundary=\"%s\"\r\n\r\n", boundary))
+
+	if textBody != "" {
+		sb.WriteString(fmt.Sprintf("--%s\r\n", boundary))
+		sb.WriteString("Content-Type: text/plain; charset=utf-8\r\n\r\n")
+		sb.WriteString(textBody + "\r\n")
+	}
+
+	if htmlBody != "" {
+		sb.WriteString(fmt.Sprintf("--%s\r\n", boundary))
+		sb.WriteString("Content-Type: text/html; charset=utf-8\r\n\r\n")
+		sb.WriteString(htmlBody + "\r\n")
+	}
+
+	sb.WriteString(fmt.Sprintf("--%s--\r\n", boundary))
+
+	auth := smtp.PlainAuth("", smtpUser, smtpPass, smtpHost)
+	addr := fmt.Sprintf("%s:%s", smtpHost, smtpPort)
+	if err := smtp.SendMail(addr, auth, smtpUser, to, []byte(sb.String())); err != nil {
+		return err
 	}
 
 	return nil
