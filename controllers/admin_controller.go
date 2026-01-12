@@ -27,6 +27,7 @@ type inviteAdminPayload struct {
 	Name  string `json:"name"`
 	Email string `json:"email"`
 	Role  string `json:"role"`
+	FromEmail string `json:"from_email"`
 }
 
 type activateAdminPayload struct {
@@ -185,7 +186,8 @@ func InviteAdmin(c *gin.Context) {
 	adminFrontendURL = strings.TrimRight(adminFrontendURL, "/")
 	inviteLink := fmt.Sprintf("%s/#/setup-account?token=%s&email=%s", adminFrontendURL, token, url.QueryEscape(email))
 
-	if err := utils.SendAdminInviteEmail(email, inviteLink, name, roleName); err != nil {
+	fromEmail := strings.TrimSpace(payload.FromEmail)
+	if err := utils.SendAdminInviteEmail(email, inviteLink, name, roleName, fromEmail); err != nil {
 		_ = config.DB.Unscoped().Where("admin_id = ?", admin.ID).Delete(&models.RoleMember{}).Error
 		if exists {
 			_ = config.DB.Unscoped().Model(&admin).Update("deleted_at", time.Now()).Error

@@ -9,7 +9,6 @@ import (
 	"io/ioutil"
 	"log"
 	"math/big"
-	"net/smtp"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -183,20 +182,12 @@ func SendCheckInLinkEmail(
 	confirmationCode string,
 ) error {
 
-	// SMTP config
-	smtpHost := os.Getenv("SMTP_HOST")
-	smtpPort := os.Getenv("SMTP_PORT")
-	smtpUser := os.Getenv("SMTP_USERNAME")
-	smtpPass := os.Getenv("SMTP_PASSWORD")
-	fromName := os.Getenv("SMTP_FROM_NAME")
-
-	// DEV fallback -> mock send (log) when SMTP not configured
-	if smtpUser == "" || smtpPass == "" || smtpHost == "" || smtpPort == "" {
-		// Build readable rooms text for logs
-		roomsText := roomsListText(rooms)
-		log.Printf("[MOCK EMAIL] to:%s booking:%s code:%s link:%s rooms:%s",
-			recipientEmail, bookingRef, confirmationCode, checkinLink, roomsText)
-		return nil
+	fromName := strings.TrimSpace(os.Getenv("SMTP_FROM_NAME"))
+	if fromName == "" {
+		fromName = strings.TrimSpace(os.Getenv("RESEND_FROM_NAME"))
+	}
+	if fromName == "" {
+		fromName = "Hotel"
 	}
 
 	// sanitize strings
@@ -220,13 +211,7 @@ func SendCheckInLinkEmail(
 	roomsText := roomsListText(rooms)    // plain text list
 	roomsHTML := roomsListHTML(rooms)    // html list
 
-	from := fmt.Sprintf("%s <%s>", fromName, smtpUser)
-	to := []string{recipientEmail}
-	auth := smtp.PlainAuth("", smtpUser, smtpPass, smtpHost)
-	addr := fmt.Sprintf("%s:%s", smtpHost, smtpPort)
-
 	subject := fmt.Sprintf("Booking Confirmation and Pre-Check-in — %s", bookingRef)
-	boundary := "----=_CLOUD9_EMAIL_BOUNDARY"
 
 	//
 	// PLAIN TEXT
@@ -301,33 +286,7 @@ body { background:#f5f7fb; font-family:Arial, Helvetica, sans-serif; color:#222;
 		fromName,
 	)
 
-	//
-	// MIME MULTIPART MESSAGE
-	//
-	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("From: %s\r\n", from))
-	sb.WriteString(fmt.Sprintf("To: %s\r\n", recipientEmail))
-	sb.WriteString(fmt.Sprintf("Subject: %s\r\n", subject))
-	sb.WriteString("MIME-Version: 1.0\r\n")
-	sb.WriteString(fmt.Sprintf("Content-Type: multipart/alternative; boundary=\"%s\"\r\n\r\n", boundary))
-
-	// plain
-	sb.WriteString(fmt.Sprintf("--%s\r\n", boundary))
-	sb.WriteString("Content-Type: text/plain; charset=utf-8\r\n\r\n")
-	sb.WriteString(plainBody + "\r\n")
-
-	// html
-	sb.WriteString(fmt.Sprintf("--%s\r\n", boundary))
-	sb.WriteString("Content-Type: text/html; charset=utf-8\r\n\r\n")
-	sb.WriteString(htmlBody + "\r\n")
-
-	// end
-	sb.WriteString(fmt.Sprintf("--%s--\r\n", boundary))
-
-	msg := []byte(sb.String())
-
-	// SEND EMAIL
-	if err := smtp.SendMail(addr, auth, smtpUser, to, msg); err != nil {
+	if err := sendResendEmail([]string{recipientEmail}, subject, htmlBody, plainBody, "", fromName); err != nil {
 		log.Printf("❌ Failed to send email to %s: %v", recipientEmail, err)
 		return err
 	}
