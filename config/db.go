@@ -184,6 +184,20 @@ func SeedDatabase() {
 		}
 	}
 
+	// Ensure default admin stays in owner role
+	if ownerRole, ok := rolesByKey["owner"]; ok && ownerRole.ID != 0 {
+		var admin models.Admin
+		if err := DB.Unscoped().Where("username = ?", "admin@myhotel.com").First(&admin).Error; err == nil && admin.ID != 0 {
+			var member models.RoleMember
+			err := DB.Where("role_id = ? AND admin_id = ?", ownerRole.ID, admin.ID).First(&member).Error
+			if err != nil {
+				if err := DB.Create(&models.RoleMember{RoleID: ownerRole.ID, AdminID: admin.ID}).Error; err != nil {
+					log.Printf("warning: failed to assign owner role to admin@myhotel.com: %v", err)
+				}
+			}
+		}
+	}
+
 	log.Println("Roles ensured")
 }
 
