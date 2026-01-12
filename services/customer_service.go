@@ -5,7 +5,7 @@ import (
 	"hotel-backend/models"
 )
 
-type CustomerService struct {
+type CustomerService struct { 
     DB *gorm.DB
 }
 
