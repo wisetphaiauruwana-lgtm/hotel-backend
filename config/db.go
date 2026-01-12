@@ -40,7 +40,7 @@ func SeedDatabase() {
 		} else {
 			admin := models.Admin{
 				FullName: "Admin User",
-				Username: "admin@hotel.local",
+				Username: "admin@myhotel.com",
 				Password: string(hash),
 			}
 			if err := DB.Create(&admin).Error; err != nil {

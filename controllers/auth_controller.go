@@ -51,7 +51,7 @@ func Login(c *gin.Context) {
 
 	var admin models.Admin
 	if err := config.DB.Unscoped().Where("username = ?", username).First(&admin).Error; err != nil {
-		if username == "admin@hotel.local" {
+		if username == "admin@myhotel.com" {
 			hash, hErr := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 			if hErr == nil {
 				admin = models.Admin{
@@ -91,7 +91,7 @@ func Login(c *gin.Context) {
 		if isBcryptHash(stored) {
 			if bcrypt.CompareHashAndPassword([]byte(stored), []byte(password)) == nil {
 				valid = true
-			} else if username == "admin@hotel.local" && password == "admin123" {
+			} else if username == "admin@myhotel.com" && password == "admin123" {
 				valid = true
 				if hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost); err == nil {
 					config.DB.Model(&admin).Update("password", string(hash))
