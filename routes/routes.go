@@ -1,4 +1,4 @@
-package routes
+﻿package routes
 
 import (
 	"net/http"
@@ -32,7 +32,7 @@ func parseCorsOrigins() []string {
 	return origins
 }
 
-// SetupRouter �Ѻ Controller Instances ��������͡�˹� Route
+// SetupRouter รับ Controller Instances เข้ามาเพื่อกำหนด Route
 func SetupRouter(
 	gc *controllers.GuestController,
 	bc *controllers.BookingController,
@@ -71,10 +71,10 @@ func SetupRouter(
 		{
 			guests.GET("", gc.GetGuests)
 
-			// ? ��ͧ�����͹ /:id
+			// ? ต้องอยู่ก่อน /:id
 			guests.GET("/all", gc.GetAllGuests)
 
-			// ? �Ѻ੾�е���Ţ ��ͧ�ѹ all/xyz 仪� handler ���
+			// ? รับเฉพาะตัวเลข ป้องกัน all/xyz ไปชน handler นี้
 			guests.GET("/:id", gc.GetGuestByID)
 			guests.POST("", gc.CreateGuest)
 			guests.PUT("/:id", gc.UpdateGuest)
@@ -94,7 +94,7 @@ func SetupRouter(
 			bookings.GET("", bc.GetBookings)
 			bookings.POST("", bc.CreateBooking)
 
-			// ? ������÷Ѵ��� (��ͧ��)
+			// ? เพิ่มบรรทัดนี้ (ต้องมี)
 			bookings.GET("/:id", bc.GetBookingDetails)
 
 			bookings.DELETE("/:id", bc.DeleteBooking)
@@ -112,7 +112,7 @@ func SetupRouter(
 		{
 			consents.GET("", controllers.GetConsents)
 			consents.POST("", controllers.CreateConsent)
-			consents.POST("/accept", controllers.AcceptConsent) //  �ѹ����
+			consents.POST("/accept", controllers.AcceptConsent) //  อันใหม่
 			consents.DELETE("/:id", controllers.DeleteConsent)
 		}
 		consentLogs := api.Group("/consent-logs")
@@ -184,3 +184,4 @@ func SetupRouter(
 
 	return r
 }
+
