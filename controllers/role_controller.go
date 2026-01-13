@@ -28,7 +28,7 @@ var defaultActionsByModule = map[string][]string{
 	"bookingManagement":   {"view", "create", "edit", "delete"},
 	"roomManagement":      {"view", "create", "edit", "delete", "editStatus"},
 	"customerList":        {"view", "create", "edit", "delete", "export"},
-	"tm30Verification":    {"view", "submit", "verify"},
+	"tm30Verification":    {"view", "submit", "verify", "export"},
 	"rolesAndPermissions": {"view", "create", "edit", "delete"},
 }
 

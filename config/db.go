@@ -118,6 +118,7 @@ func SeedDatabase() {
 		"tm30Verification.view",
 		"tm30Verification.submit",
 		"tm30Verification.verify",
+		"tm30Verification.export",
 		"rolesAndPermissions.view",
 		"rolesAndPermissions.create",
 		"rolesAndPermissions.edit",
