@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strconv"
 	"strings"
 	"time"
 
@@ -436,8 +437,29 @@ func (s *BookingService) GetAllWithRelations() ([]models.Booking, error) {
 
 // DeleteByStringID
 func (s *BookingService) DeleteByStringID(referenceCode string) error {
-	if err := s.DB.Where("reference_code = ?", referenceCode).Delete(&models.Booking{}).Error; err != nil {
-		return fmt.Errorf("failed to delete booking: %w", err)
+	ref := strings.TrimSpace(referenceCode)
+	if ref == "" {
+		return gorm.ErrRecordNotFound
+	}
+
+	// Try numeric id first if possible
+	if id, err := strconv.ParseUint(ref, 10, 64); err == nil && id != 0 {
+		res := s.DB.Delete(&models.Booking{}, id)
+		if res.Error != nil {
+			return fmt.Errorf("failed to delete booking: %w", res.Error)
+		}
+		if res.RowsAffected > 0 {
+			return nil
+		}
+	}
+
+	// Fallback to reference_code
+	res := s.DB.Where("reference_code = ?", ref).Delete(&models.Booking{})
+	if res.Error != nil {
+		return fmt.Errorf("failed to delete booking: %w", res.Error)
+	}
+	if res.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
 	}
 	return nil
 }
