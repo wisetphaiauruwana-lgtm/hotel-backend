@@ -742,7 +742,7 @@ func (s *BookingService) CheckoutBooking(bookingID uint) error {
 		for _, br := range booking.Rooms {
 			if err := tx.Model(&models.Room{}).
 				Where("id = ?", br.RoomID).
-				Updates(map[string]interface{}{"status": "Available"}).Error; err != nil {
+				Updates(map[string]interface{}{"status": "Cleaning"}).Error; err != nil {
 				return err
 			}
 		}
