@@ -12,6 +12,7 @@ type Room struct {
 	RoomTypeID *uint `json:"RoomTypeID,omitempty" gorm:"column:room_type_id"`
 	RoomNumber string `json:"roomNumber" gorm:"column:room_number;uniqueIndex;type:varchar(50)"`
 	RoomCode   string `json:"roomCode"   gorm:"column:room_code;type:varchar(50)"`
+	AccessCode string `json:"accessCode" gorm:"column:access_code;type:varchar(6)"`
 
 	Type         string  `json:"type"`
 	Status       string  `json:"status"`

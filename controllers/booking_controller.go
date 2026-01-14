@@ -362,6 +362,7 @@ func (ctrl *BookingController) VerifyToken(c *gin.Context) {
 	for _, br := range booking.Rooms {
 		roomNumber := ""
 		roomType := ""
+		accessCode := ""
 
 		if br.Room.ID != 0 {
 			if strings.TrimSpace(br.Room.RoomCode) != "" {
@@ -374,12 +375,14 @@ func (ctrl *BookingController) VerifyToken(c *gin.Context) {
 			if roomType == "" && br.Room.RoomType.ID != 0 {
 				roomType = strings.TrimSpace(br.Room.RoomType.TypeName)
 			}
+			accessCode = strings.TrimSpace(br.Room.AccessCode)
 		}
 
 		rooms = append(rooms, map[string]interface{}{
 			"bookingInfoId": br.ID,
 			"roomNumber":    roomNumber,
 			"roomType":      roomType,
+			"accessCode":    accessCode,
 		})
 	}
 
@@ -671,6 +674,7 @@ func (ctrl *BookingController) GetBookingDetails(c *gin.Context) {
 		num := ""
 		rtype := ""
 		desc := ""
+		accessCode := ""
 
 		if br.Room.ID != 0 {
 			if strings.TrimSpace(br.Room.RoomCode) != "" {
@@ -680,12 +684,14 @@ func (ctrl *BookingController) GetBookingDetails(c *gin.Context) {
 			}
 			rtype = strings.TrimSpace(br.Room.Type)
 			desc = strings.TrimSpace(br.Room.Description)
+			accessCode = strings.TrimSpace(br.Room.AccessCode)
 		}
 
 		rooms = append(rooms, map[string]interface{}{
 			"bookingInfoId": br.ID,
 			"roomNumber":    num,
 			"roomType":      rtype,
+			"accessCode":    accessCode,
 			"roomDetails": map[string]interface{}{
 				"description": desc,
 			},

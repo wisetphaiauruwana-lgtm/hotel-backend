@@ -1,8 +1,10 @@
 package controllers
 
 import (
+	"crypto/rand"
 	"fmt"
 	"log"
+	"math/big"
 	"net/http"
 	"strings"
 
@@ -11,6 +13,24 @@ import (
 
 	"github.com/gin-gonic/gin"
 )
+
+func generateUniqueAccessCode() (string, error) {
+	for i := 0; i < 5; i++ {
+		n, err := rand.Int(rand.Reader, big.NewInt(1000000))
+		if err != nil {
+			return "", err
+		}
+		code := fmt.Sprintf("%06d", n.Int64())
+		var count int64
+		if err := config.DB.Model(&models.Room{}).Where("access_code = ?", code).Count(&count).Error; err != nil {
+			return "", err
+		}
+		if count == 0 {
+			return code, nil
+		}
+	}
+	return "", fmt.Errorf("failed to generate unique access code")
+}
 
 
 // ----------------------------------------------------
@@ -70,7 +90,18 @@ func CreateRoom(c *gin.Context) {
     }
 }
 
-
+	if strings.TrimSpace(room.AccessCode) == "" {
+		code, err := generateUniqueAccessCode()
+		if err != nil {
+			log.Printf("❌ Access code generation error: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"status":  "error",
+				"message": "Failed to generate access code",
+			})
+			return
+		}
+		room.AccessCode = code
+	}
 
     // Save
     if result := config.DB.Create(&room); result.Error != nil {
@@ -120,6 +151,36 @@ func UpdateRoom(c *gin.Context) {
 	delete(updateData, "created_at")
 	delete(updateData, "updated_at")
 	delete(updateData, "deleted_at")
+
+	if v, ok := updateData["accessCode"]; ok {
+		updateData["access_code"] = v
+		delete(updateData, "accessCode")
+	}
+
+	var existing models.Room
+	if err := config.DB.First(&existing, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"status":  "error",
+			"message": "Room not found",
+		})
+		return
+	}
+
+	if statusRaw, ok := updateData["status"]; ok {
+		statusStr := fmt.Sprintf("%v", statusRaw)
+		if strings.EqualFold(existing.Status, "Cleaning") && strings.EqualFold(statusStr, "Available") {
+			code, err := generateUniqueAccessCode()
+			if err != nil {
+				log.Printf("❌ Access code generation error: %v", err)
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"status":  "error",
+					"message": "Failed to generate access code",
+				})
+				return
+			}
+			updateData["access_code"] = code
+		}
+	}
 
 	// Update DB
 	if err := config.DB.Model(&models.Room{}).Where("id = ?", id).Updates(updateData).Error; err != nil {
