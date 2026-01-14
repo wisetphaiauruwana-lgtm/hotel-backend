@@ -147,6 +147,7 @@ func SetupRouter(
 			admins.POST("", controllers.CreateAdmin)
 			admins.POST("/invite", controllers.InviteAdmin)
 			admins.POST("/activate", controllers.ActivateAdmin)
+			admins.PUT("/:id/role", controllers.UpdateAdminRole)
 			admins.DELETE("/:id", controllers.DeleteAdmin)
 		}
 		rooms := api.Group("/rooms")

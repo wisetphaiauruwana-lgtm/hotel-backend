@@ -256,7 +256,7 @@ func resolveMySQLDSN() (string, string, error) {
 		return raw, strings.TrimSpace(os.Getenv("DB_NAME")), nil
 	}
 
-	user := envOrDefault("DB_USER", "root")
+	user :=envOrDefault("DB_USER", "root")
 	pass := envOrDefault("DB_PASS", "Wisetphaiauruwana")
 	host := envOrDefault("DB_HOST", "127.0.0.1")
 	port := envOrDefault("DB_PORT", "3306")

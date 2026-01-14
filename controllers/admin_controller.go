@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 	"regexp"
+	"strconv"
 
 	"hotel-backend/config"
 	"hotel-backend/models"
@@ -34,6 +35,10 @@ type activateAdminPayload struct {
 	Email    string `json:"email"`
 	Token    string `json:"token"`
 	Password string `json:"password"`
+}
+
+type updateAdminRolePayload struct {
+	Role string `json:"role"`
 }
 
 var inviteEmailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
@@ -266,4 +271,65 @@ func DeleteAdmin(c *gin.Context) {
 	id := c.Param("id")
 	config.DB.Delete(&models.Admin{}, id)
 	c.JSON(http.StatusOK, gin.H{"message": "Admin deleted"})
+}
+
+// Update admin role (Owner can change staff role)
+func UpdateAdminRole(c *gin.Context) {
+	idStr := strings.TrimSpace(c.Param("id"))
+	id, err := strconv.ParseUint(idStr, 10, 32)
+	if err != nil || id == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid admin id"})
+		return
+	}
+
+	var payload updateAdminRolePayload
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid payload"})
+		return
+	}
+
+	roleName, ok := normalizeInviteRole(payload.Role)
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid role"})
+		return
+	}
+
+	var admin models.Admin
+	if err := config.DB.First(&admin, uint(id)).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "admin not found"})
+		return
+	}
+
+	var role models.Role
+	if err := config.DB.Where("name = ?", roleName).First(&role).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			role = models.Role{
+				Name:        roleName,
+				Description: "",
+			}
+			if err := config.DB.Create(&role).Error; err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+	}
+
+	if err := config.DB.Unscoped().Where("admin_id = ?", admin.ID).Delete(&models.RoleMember{}).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := config.DB.Create(&models.RoleMember{RoleID: role.ID, AdminID: admin.ID}).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"id":    admin.ID,
+		"email": admin.Username,
+		"role":  roleName,
+	})
 }
