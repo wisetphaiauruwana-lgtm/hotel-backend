@@ -9,6 +9,13 @@ import (
 	"time"
 )
 
+func resolveUploadsDir() string {
+	dir := strings.TrimSpace(os.Getenv("UPLOADS_DIR"))
+	if dir == "" {
+		return "uploads"
+	}
+	return dir
+}
 
 func SaveBase64Image(b64 string, subdir string) (string, error) {
 	if idx := strings.Index(b64, "base64,"); idx >= 0 {
@@ -20,7 +27,8 @@ func SaveBase64Image(b64 string, subdir string) (string, error) {
 		return "", fmt.Errorf("decode base64: %w", err)
 	}
 
-	dir := filepath.Join("uploads", subdir)
+	baseDir := resolveUploadsDir()
+	dir := filepath.Join(baseDir, subdir)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return "", fmt.Errorf("mkdir uploads dir: %w", err)
 	}

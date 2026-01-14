@@ -47,6 +47,7 @@ func (s *GuestService) GetAll() ([]models.Guest, error) {
 	err := s.DB.
 		Preload("Booking.Room").
 		Preload("Booking.Rooms.Room").
+		Where("guests.deleted_at IS NULL").
 		Order("guests.id DESC").
 		Find(&guests).Error
 
@@ -93,6 +94,7 @@ func (s *GuestService) GetAllRaw() ([]models.Guest, error) {
 
 	var guests []models.Guest
 	err := s.DB.
+		Where("deleted_at IS NULL").
 		Order("id DESC").
 		Find(&guests).Error
 
@@ -112,7 +114,7 @@ func (s *GuestService) GetByID(id uint) (*models.Guest, error) {
 	log.Printf("➡️ GuestService.GetByID id=%d", id)
 
 	var guest models.Guest
-	if err := s.DB.First(&guest, id).Error; err != nil {
+	if err := s.DB.Where("deleted_at IS NULL").First(&guest, id).Error; err != nil {
 		log.Printf("⬅️ GuestService.GetByID error: %v", err)
 		return nil, err
 	}
@@ -159,7 +161,7 @@ func (s *GuestService) GetByBookingID(bookingID uint) ([]models.Guest, error) {
 	var guests []models.Guest
 
 	err := s.DB.
-		Where("booking_id = ?", bookingID).
+		Where("booking_id = ? AND deleted_at IS NULL", bookingID).
 		Order("is_main_guest DESC, id ASC").
 		Find(&guests).Error
 
@@ -180,7 +182,7 @@ func (s *GuestService) GetByBookingIDRaw(bookingID uint) ([]models.Guest, error)
 
 	var guests []models.Guest
 	err := s.DB.
-		Where("booking_id = ?", bookingID).
+		Where("booking_id = ? AND deleted_at IS NULL", bookingID).
 		Order("is_main_guest DESC, id ASC").
 		Find(&guests).Error
 

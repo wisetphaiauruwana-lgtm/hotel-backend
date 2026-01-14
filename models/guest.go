@@ -2,6 +2,8 @@ package models
 
 import (
 	"time"
+
+	"gorm.io/gorm"
 )
 
 type Guest struct {
@@ -9,6 +11,7 @@ type Guest struct {
 
     CreatedAt time.Time `json:"createdAt"`
     UpdatedAt time.Time `json:"updatedAt"`
+    DeletedAt gorm.DeletedAt `gorm:"index" json:"deletedAt"`
 
     BookingID *uint `gorm:"index;column:booking_id" json:"booking_id"`
 

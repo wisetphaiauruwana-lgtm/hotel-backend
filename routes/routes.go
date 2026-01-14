@@ -32,6 +32,14 @@ func parseCorsOrigins() []string {
 	return origins
 }
 
+func resolveUploadsDir() string {
+	dir := strings.TrimSpace(os.Getenv("UPLOADS_DIR"))
+	if dir == "" {
+		return "./uploads"
+	}
+	return dir
+}
+
 // SetupRouter รับ Controller Instances เข้ามาเพื่อกำหนด Route
 func SetupRouter(
 	gc *controllers.GuestController,
@@ -41,7 +49,7 @@ func SetupRouter(
 	apiKey string,
 ) *gin.Engine {
 	r := gin.Default()
-	r.Static("/uploads", "./uploads")
+	r.Static("/uploads", resolveUploadsDir())
 
 	origins := parseCorsOrigins()
 	allowCredentials := true
