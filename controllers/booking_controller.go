@@ -3,14 +3,17 @@ package controllers
 
 import (
 	"bytes"
+	"crypto/rand"
 	"encoding/json"
 	"errors"
+	"fmt"
 	mysql "github.com/go-sql-driver/mysql"
 	"hotel-backend/config"
 	"hotel-backend/models"
 	"hotel-backend/services"
 	"io/ioutil"
 	"log"
+	"math/big"
 	"net/http"
 	"strconv"
 	"strings"
@@ -73,6 +76,24 @@ type BookingController struct {
 
 func NewBookingController(svc *services.BookingService) *BookingController {
 	return &BookingController{BookingSvc: svc}
+}
+
+func generateUniqueRoomAccessCode() (string, error) {
+	for i := 0; i < 5; i++ {
+		n, err := rand.Int(rand.Reader, big.NewInt(1000000))
+		if err != nil {
+			return "", err
+		}
+		code := fmt.Sprintf("%06d", n.Int64())
+		var count int64
+		if err := config.DB.Model(&models.Room{}).Where("access_code = ?", code).Count(&count).Error; err != nil {
+			return "", err
+		}
+		if count == 0 {
+			return code, nil
+		}
+	}
+	return "", fmt.Errorf("failed to generate unique access code")
 }
 
 // ---------------------------
@@ -376,6 +397,17 @@ func (ctrl *BookingController) VerifyToken(c *gin.Context) {
 				roomType = strings.TrimSpace(br.Room.RoomType.TypeName)
 			}
 			accessCode = strings.TrimSpace(br.Room.AccessCode)
+			if accessCode == "" {
+				if code, err := generateUniqueRoomAccessCode(); err == nil {
+					if err := config.DB.Model(&models.Room{}).Where("id = ?", br.Room.ID).Update("access_code", code).Error; err != nil {
+						log.Printf("verify token: failed to persist access code for room %d: %v", br.Room.ID, err)
+					} else {
+						accessCode = code
+					}
+				} else {
+					log.Printf("verify token: failed to generate access code for room %d: %v", br.Room.ID, err)
+				}
+			}
 		}
 
 		rooms = append(rooms, map[string]interface{}{
@@ -685,6 +717,17 @@ func (ctrl *BookingController) GetBookingDetails(c *gin.Context) {
 			rtype = strings.TrimSpace(br.Room.Type)
 			desc = strings.TrimSpace(br.Room.Description)
 			accessCode = strings.TrimSpace(br.Room.AccessCode)
+			if accessCode == "" {
+				if code, err := generateUniqueRoomAccessCode(); err == nil {
+					if err := config.DB.Model(&models.Room{}).Where("id = ?", br.Room.ID).Update("access_code", code).Error; err != nil {
+						log.Printf("booking details: failed to persist access code for room %d: %v", br.Room.ID, err)
+					} else {
+						accessCode = code
+					}
+				} else {
+					log.Printf("booking details: failed to generate access code for room %d: %v", br.Room.ID, err)
+				}
+			}
 		}
 
 		rooms = append(rooms, map[string]interface{}{
