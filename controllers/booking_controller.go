@@ -349,12 +349,21 @@ func (ctrl *BookingController) VerifyToken(c *gin.Context) {
 	// --------------------
 	var booking models.Booking
 	if err := ctrl.BookingSvc.DB.
-		Joins("JOIN booking_infos bi ON bi.booking_id = bookings.id").
-		Where("bi.token = ?", token).
+		Where("id = ?", bi.BookingID).
 		Preload("Customer").
 		Preload("Rooms.Room").
 		Preload("Rooms.Room.RoomType").
 		First(&booking).Error; err != nil {
+
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{
+				"error": gin.H{
+					"code":    "error.bookingNotFound",
+					"message": "ไม่พบข้อมูลการจองสำหรับลิงก์นี้",
+				},
+			})
+			return
+		}
 
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": gin.H{
