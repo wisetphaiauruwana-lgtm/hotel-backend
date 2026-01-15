@@ -130,6 +130,18 @@ func BuildCheckinLink(frontendURL, token string, useQuery bool) string {
 	return fmt.Sprintf("%s/checkin/%s", frontendURL, token)
 }
 
+// AppendBookingIDParam appends bookingId query param to a check-in link.
+func AppendBookingIDParam(link string, bookingID uint) string {
+	if bookingID == 0 {
+		return link
+	}
+	sep := "?"
+	if strings.Contains(link, "?") {
+		sep = "&"
+	}
+	return fmt.Sprintf("%s%sbookingId=%d", link, sep, bookingID)
+}
+
 //
 // ===========================================================
 //  EMAIL MASKING

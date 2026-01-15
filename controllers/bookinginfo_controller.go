@@ -193,6 +193,7 @@ func (ctrl *BookingInfoController) ResendCheckinCode(c *gin.Context) {
 	go func(b models.BookingInfo) {
 		// build checkin link
 		link := utils.BuildCheckinLink(utils.EnvOrDefault("FRONTEND_URL", "http://localhost:3000"), b.Token, true)
+		link = utils.AppendBookingIDParam(link, b.BookingID)
 
 		// Use helper to gather rooms & send email (silently ignore error)
 		if err := ctrl.sendCheckInEmail(

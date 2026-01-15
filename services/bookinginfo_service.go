@@ -169,11 +169,13 @@ func (s *BookingInfoService) InitiateCheckIn(bookingID uint) (models.BookingInfo
 	guestLastName := booking.Customer.FullName
 	checkInStr := ""
 	checkOutStr := ""
+	checkinLink := utils.BuildCheckinLink(frontendURL, token, true)
+	checkinLink = utils.AppendBookingIDParam(checkinLink, bookingID)
 
 	err = utils.SendCheckInLinkEmail(
 		guestEmail,
 		bookingRef,
-		utils.BuildCheckinLink(frontendURL, token, true),
+		checkinLink,
 		guestLastName,
 		[]utils.RoomInfo{},
 		checkInStr,
