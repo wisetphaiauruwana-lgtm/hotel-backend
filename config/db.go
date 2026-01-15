@@ -123,6 +123,13 @@ func SeedDatabase() {
 		"rolesAndPermissions.create",
 		"rolesAndPermissions.edit",
 		"rolesAndPermissions.delete",
+		"emailManagement.view",
+		"emailManagement.send",
+		"emailManagement.config",
+		"roomAccess.view",
+		"roomAccess.reset",
+		"auditLogs.view",
+		"auditLogs.export",
 	}
 
 	rolesByKey := map[string]models.Role{}
@@ -154,16 +161,22 @@ func SeedDatabase() {
 
 	ownerRole, ok := rolesByKey["owner"]
 	if ok && ownerRole.ID != 0 {
-		var permCount int64
-		DB.Model(&models.RolePermission{}).Where("role_id = ?", ownerRole.ID).Count(&permCount)
-		if permCount == 0 {
-			perms := make([]models.RolePermission, 0, len(allPerms))
-			for _, p := range allPerms {
-				perms = append(perms, models.RolePermission{RoleID: ownerRole.ID, Permission: p})
+		var existingPerms []models.RolePermission
+		if err := DB.Model(&models.RolePermission{}).Where("role_id = ?", ownerRole.ID).Find(&existingPerms).Error; err == nil {
+			existingSet := map[string]struct{}{}
+			for _, rp := range existingPerms {
+				existingSet[rp.Permission] = struct{}{}
 			}
-			if len(perms) > 0 {
-				if err := DB.Create(&perms).Error; err != nil {
-					log.Printf("warning: failed to create owner permissions: %v", err)
+			missing := make([]models.RolePermission, 0)
+			for _, p := range allPerms {
+				if _, ok := existingSet[p]; ok {
+					continue
+				}
+				missing = append(missing, models.RolePermission{RoleID: ownerRole.ID, Permission: p})
+			}
+			if len(missing) > 0 {
+				if err := DB.Create(&missing).Error; err != nil {
+					log.Printf("warning: failed to add missing owner permissions: %v", err)
 				}
 			}
 		}
