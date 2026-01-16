@@ -2,6 +2,7 @@
 package services
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -146,7 +147,7 @@ func (s *BookingService) InitiateCheckInProcess(bookingID uint) (models.BookingI
 			CheckinCode:   formatted,
 			Status:        "INITIATED",
 			EmailStatus:   "PENDING",
-			ExpiresAt:     &expiresAt,
+			ExpiresAt:     expiresAt,
 			CodeExpiresAt: codeExp,
 			GuestEmail:    booking.Customer.Email,
 			GuestLastName: booking.Customer.FullName,
@@ -644,8 +645,8 @@ func (s *BookingService) CreateBookingMultiple(
 			CheckinCode:   formatted,
 			Status:        "INITIATED",
 			EmailStatus:   "PENDING",
-			ExpiresAt:     &expiresAt,
-			CodeExpiresAt: &codeExpires,
+			ExpiresAt:     expiresAt,
+			CodeExpiresAt: codeExpires,
 			GuestEmail:    cust.Email,
 			GuestLastName: cust.FullName,
 		}
