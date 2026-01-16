@@ -18,6 +18,10 @@ import (
 	"gorm.io/gorm/clause"
 )
 
+func timePtr(t time.Time) *time.Time {
+	return &t
+}
+
 // BookingService เป็น wrapper รอบ *gorm.DB เพื่อแยก logic ของ booking
 type BookingService struct {
 	DB *gorm.DB
@@ -129,11 +133,9 @@ func (s *BookingService) InitiateCheckInProcess(bookingID uint) (models.BookingI
 			return models.BookingInfo{}, fmt.Errorf("failed to format checkin code: %w", fErr)
 		}
 
-		expiresAt := time.Now().UTC().Add(24 * time.Hour)
+		var expiresAt *time.Time
 		var codeExp *time.Time
-		if strings.ToLower(utils.EnvOrDefault("CHECKIN_CODE_NEVER_EXPIRE", "false")) == "true" {
-			codeExp = nil
-		} else {
+		if strings.ToLower(utils.EnvOrDefault("CHECKIN_CODE_NEVER_EXPIRE", "false")) != "true" {
 			t := time.Now().UTC().Add(7 * 24 * time.Hour)
 			codeExp = &t
 		}
@@ -632,8 +634,9 @@ func (s *BookingService) CreateBookingMultiple(
 			return resultBooking, fmt.Errorf("email_send_failed: failed to format code: %w", fErr)
 		}
 
-		expiresAt := time.Now().UTC().Add(24 * time.Hour)
-		codeExpires := time.Now().UTC().Add(7 * 24 * time.Hour)
+		var expiresAt *time.Time
+		var codeExpires *time.Time
+		codeExpires = timePtr(time.Now().UTC().Add(7 * 24 * time.Hour))
 
 		bookingInfo := models.BookingInfo{
 			BookingID:     bookingID,
