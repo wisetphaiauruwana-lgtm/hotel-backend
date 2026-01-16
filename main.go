@@ -62,6 +62,8 @@ func main() {
 	}
 	addr := ":" + port
 
+	autoCtx, autoCancel := context.WithCancel(context.Background())
+
 	srv := &http.Server{
 		Addr:    addr,
 		Handler: router,
@@ -80,11 +82,15 @@ func main() {
 		}
 	}()
 
+	go startAutoCheckout(autoCtx, bookingService)
+
 	// Wait for interrupt signal to gracefully shutdown the server with timeout
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 	<-quit
 	log.Println("⚠️  Shutdown signal received, shutting down server...")
+
+	autoCancel()
 
 	// Create context with timeout for shutdown
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
@@ -94,4 +100,26 @@ func main() {
 	}
 
 	log.Println("✅ Server stopped gracefully")
+}
+
+func startAutoCheckout(ctx context.Context, svc *services.BookingService) {
+	ticker := time.NewTicker(30 * time.Minute)
+	defer ticker.Stop()
+
+	// run immediately
+	if err := svc.AutoCheckoutDue(ctx, time.Now()); err != nil {
+		log.Printf("auto checkout job failed: %v", err)
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			log.Println("auto checkout job stopped")
+			return
+		case now := <-ticker.C:
+			if err := svc.AutoCheckoutDue(ctx, now); err != nil {
+				log.Printf("auto checkout job failed: %v", err)
+			}
+		}
+	}
 }

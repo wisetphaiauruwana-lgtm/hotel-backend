@@ -753,3 +753,29 @@ func (s *BookingService) CheckoutBooking(bookingID uint) error {
 		return nil
 	})
 }
+
+func (s *BookingService) AutoCheckoutDue(ctx context.Context, now time.Time) error {
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
+
+	midday := time.Date(now.Year(), now.Month(), now.Day(), 12, 0, 0, 0, now.Location())
+	if now.Before(midday) {
+		return nil
+	}
+
+	var dueBookings []models.Booking
+	if err := s.DB.
+		Where("status <> ? AND check_out IS NOT NULL AND check_out <= ? AND deleted_at IS NULL", "Checked-Out", midday).
+		Find(&dueBookings).Error; err != nil {
+		return err
+	}
+
+	for _, b := range dueBookings {
+		if err := s.CheckoutBooking(b.ID); err != nil {
+			log.Printf("auto checkout failed for booking %d: %v", b.ID, err)
+		}
+	}
+
+	return nil
+}
