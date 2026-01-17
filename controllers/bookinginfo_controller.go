@@ -134,6 +134,25 @@ func (ctrl *BookingInfoController) ValidateCheckinCode(c *gin.Context) {
 		return
 	}
 
+	// Block if booking already Checked-Out
+	var booking models.Booking
+	if err := config.DB.Select("status", "check_out").Where("id = ?", bi.BookingID).First(&booking).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "booking not found"})
+			return
+		}
+		log.Printf("ValidateCheckinCode booking fetch error: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load booking"})
+		return
+	}
+	if strings.EqualFold(strings.TrimSpace(booking.Status), "Checked-Out") || booking.CheckOut != nil {
+		c.JSON(http.StatusGone, gin.H{
+			"error":   "booking checked out",
+			"message": "การจองนี้เช็คเอาท์แล้ว ไม่สามารถใช้รหัสนี้ได้",
+		})
+		return
+	}
+
 	// Optionally validate query (last name or booking reference) if provided
 	// Current implementation returns success if code is valid and not expired.
 	// If you want to enforce query matching, implement additional checks here.
