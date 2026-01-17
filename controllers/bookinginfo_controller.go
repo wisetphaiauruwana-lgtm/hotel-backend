@@ -145,7 +145,7 @@ func (ctrl *BookingInfoController) ValidateCheckinCode(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load booking"})
 		return
 	}
-	if strings.EqualFold(strings.TrimSpace(booking.Status), "Checked-Out") || booking.CheckOut != nil {
+	if strings.EqualFold(strings.TrimSpace(booking.Status), "Checked-Out") {
 		c.JSON(http.StatusGone, gin.H{
 			"error":   "booking checked out",
 			"message": "การจองนี้เช็คเอาท์แล้ว ไม่สามารถใช้รหัสนี้ได้",
